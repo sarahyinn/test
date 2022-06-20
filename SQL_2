@@ -1,0 +1,255 @@
+
+ARRAY OUTPUT YIELD = sum(OUTPUT _CHIP_QTY FROM H_SHEET_OUTPUT_ODS) / (sum(CHIP_PER_SHEET FROM C_ROU_PROD_MST)+sum(SCRAP_SHEET_CHIP FROM H_LOT_SHEETSCRAP_ODS WHERE SCRAP_TYPE=’SHEET’))
+ARRAY SHIPPING YIELD = sum(SHIPPING_CHIP_QTY FROM H_SHEET_OUTPUT_ODS) / (sum(CHIP_PER_SHEET FROM C_ROU_PROD_MST)+sum(SCRAP_SHEET_CHIP FROM H_LOT_SHEETSCRAP_ODS WHERE SCRAP_TYPE=’SHEET’))
+
+
+
+#OUTPUT _TOTAL_CHIP_QTY and SHIPPING _TOTAL_CHIP_QTY and SCRAP_REASON
+
+%sql
+
+SELECT A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.START_DATE, B.SCRAP_CHIP_QTY, 
+A.OUTPUT_MFG_DAY, A.OUTPUT_TIME, A.OUTPUT_CHIP_QTY, 
+Case when (A.OUTPUT_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as OUTPUT_SCRAP_CHIP_QTY, 
+A.LAYOUT_OX, 
+A.SHIPPING_MFG_DAY, A.SHIPPING_TIME, A.SHIPPING_SHEET_QTY, A.SHIPPING_CHIP_QTY,
+Case when (A.SHIPPING_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as SHIPPING_SCRAP_CHIP_QTY,
+B.SCRAP_REASON01, B.SCRAP_REASON02, B.SCRAP_REASON03, 
+Case when substr(B.SCRAP_REASON03,1,4)='AUTO' then B.SCRAP_REASON02||'_AUTO' else B.SCRAP_REASON02||'_'||B.SCRAP_REASON03 end as SCRAP_REASON04,
+B.SCRAP_TYPE, SUBSTRING(A.LOT_ID, 0, 2) AS MODE_TYPE, A.CHIP_PER_SHEET, A.X_CHIP_CNT, A.Y_CHIP_CNT
+from (
+
+    select A.MFG_DAY as SHIPPING_MFG_DAY, A.OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID_CHIP_ID as SHEET_ID, A.START_DATE, A.SHIPPING_TIME, 
+    A.OUTPUT_TIME, A.SHIPPING_SHEET_QTY, A.OUTPUT_CHIP_QTY, A.SHIPPING_CHIP_QTY, A.LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT   
+    from uledgp_prod.l6k_array_h_sheet_output_ods A 
+    LEFT JOIN 
+    (
+      select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+    ) B 
+    ON A.MODEL_NO=B.MODEL_NO
+    where A.MFG_DAY between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) 
+
+) A LEFT JOIN 
+(
+    select B.* 
+    from (
+        select B.MODEL_NO, B.PRODUCT_CODE, B.OP_ID, B.MFG_DAY, B.LOT_TYPE, B.SCRAP_TYPE, B.SCRAP_FLAG, B.SHEET_ID, B.LOT_RUN_ID, B.TRANS_TIMESTAMP, B.SCRAP_CHIP_QTY,
+        RANK() OVER(PARTITION BY B.SHEET_ID, B.OP_ID, B.SCRAP_TYPE, B.LOT_RUN_ID ORDER BY B.SHEET_ID, B.OP_ID, B.SCRAP_TYPE, B.LOT_RUN_ID, B.TRANS_TIMESTAMP desc) RANK1, 
+        Case when length(B.SCRAP_CODE_CAT)>0 then upper(B.SCRAP_CODE_CAT) when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+        Case when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON02,
+        Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.TRANS_REASON) end as SCRAP_REASON03 
+        from uledgp_prod.l6k_array_h_lot_sheetscrap_ods B 
+        where (substr(B.MODEL_NO,6,1) in ('U') or substr(B.PR		ODUCT_CODE,6,1) in ('U')) and B.LOT_TYPE not in ('MQC')
+        ) B 
+    where B.RANK1='1' and B.SCRAP_FLAG='S'
+) B 
+ON A.SHEET_ID=B.SHEET_ID 
+
+
+
+
+#SCRAP_SHEET_CHIP_QTY and SCRAP_REASON
+
+%sql
+
+select A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.START_DATE, A.SCRAP_CHIP_QTY, A.OUTPUT_MFG_DAY, A.OUTPUT_TIME, A.OUTPUT_CHIP_QTY, 
+A.OUTPUT_SCRAP_CHIP_QTY, A.LAYOUT_OX, A.SHIPPING_MFG_DAY, A.SHIPPING_TIME, A.SHIPPING_SHEET_QTY, A.SHIPPING_CHIP_QTY, A.SHIPPING_SCRAP_CHIP_QTY,
+A.SCRAP_REASON01, A.SCRAP_REASON02, A.SCRAP_REASON03, 
+Case when substr(A.SCRAP_REASON03,1,4)='AUTO' then A.SCRAP_REASON02||'_AUTO' else A.SCRAP_REASON02||'_'||A.SCRAP_REASON03 end as SCRAP_REASON04,
+A.SCRAP_TYPE, SUBSTRING(A.LOT_ID, 0, 2) AS MODE_TYPE, A.CHIP_PER_SHEET, A.X_CHIP_CNT, A.Y_CHIP_CNT
+
+from (
+    select A.MFG_DAY as SHIPPING_MFG_DAY, A.MFG_DAY as OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.TRANS_TIMESTAMP as START_DATE, A.TRANS_TIMESTAMP as SHIPPING_TIME, A.TRANS_TIMESTAMP as OUTPUT_TIME, 0 as SHIPPING_SHEET_QTY, 0 as OUTPUT_CHIP_QTY, 0 as SHIPPING_CHIP_QTY, 'X' as LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT,
+    A.LOT_TYPE, A.SCRAP_TYPE, A.SCRAP_FLAG, A.OP_ID, B.CHIP_PER_SHEET as SCRAP_CHIP_QTY, B.CHIP_PER_SHEET as OUTPUT_SCRAP_CHIP_QTY, B.CHIP_PER_SHEET as SHIPPING_SCRAP_CHIP_QTY,
+    RANK() OVER(PARTITION BY A.SHEET_ID, A.OP_ID, A.SCRAP_TYPE, A.LOT_RUN_ID ORDER BY A.SHEET_ID, A.OP_ID, A.SCRAP_TYPE, A.LOT_RUN_ID, A.TRANS_TIMESTAMP desc) RANK1, 
+    Case when length(A.SCRAP_CODE_CAT)>0 then upper(A.SCRAP_CODE_CAT) when length(A.OP_ID)>0 and A.OP_ID='DUMMY' then upper(A.TRANS_REASON) when length(A.OP_ID)>0 then A.OP_ID else upper(A.SCRAP_NOTE) end as SCRAP_REASON01,
+    Case when length(A.OP_ID)>0 and A.OP_ID='DUMMY' then upper(A.TRANS_REASON) when length(A.OP_ID)>0 then A.OP_ID else upper(A.SCRAP_NOTE) end as SCRAP_REASON02,
+    Case when length(A.SCRAP_NOTE)>1 then upper(A.SCRAP_NOTE) else upper(A.TRANS_REASON) end as SCRAP_REASON03 
+    from uledgp_prod.l6k_array_h_lot_sheetscrap_ods A 
+    LEFT JOIN 
+    (
+      select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+    ) B 
+    ON A.MODEL_NO=B.MODEL_NO
+    where A.MFG_DAY between ("2022-01-01") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.SCRAP_TYPE not in ('CHIP')
+) A 
+where A.RANK1='1' and A.SCRAP_FLAG='S'
+
+
+
+
+
+
+#OUTPUT _TOTAL_CHIP_QTY and SHIPPING _TOTAL_CHIP_QTY and SCRAP_REASON
+
+sql_string = f'''
+SELECT A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.START_DATE, B.SCRAP_CHIP_QTY, 
+A.OUTPUT_MFG_DAY, A.OUTPUT_TIME, A.OUTPUT_CHIP_QTY, 
+Case when (A.OUTPUT_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as OUTPUT_SCRAP_CHIP_QTY, 
+A.LAYOUT_OX, 
+A.SHIPPING_MFG_DAY, A.SHIPPING_TIME, A.SHIPPING_SHEET_QTY, A.SHIPPING_CHIP_QTY,
+Case when (A.SHIPPING_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as SHIPPING_SCRAP_CHIP_QTY,
+B.SCRAP_REASON01, B.SCRAP_REASON02, B.SCRAP_REASON03, 
+Case when substr(B.SCRAP_REASON03,1,4)='AUTO' then B.SCRAP_REASON02||'_AUTO' else B.SCRAP_REASON02||'_'||B.SCRAP_REASON03 end as SCRAP_REASON04,
+B.SCRAP_TYPE, SUBSTRING(A.LOT_ID, 0, 2) AS MODE_TYPE, A.CHIP_PER_SHEET, A.X_CHIP_CNT, A.Y_CHIP_CNT
+from (
+
+    select A.MFG_DAY as SHIPPING_MFG_DAY, A.OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID_CHIP_ID as SHEET_ID, A.START_DATE, A.SHIPPING_TIME, 
+    A.OUTPUT_TIME, A.SHIPPING_SHEET_QTY, A.OUTPUT_CHIP_QTY, A.SHIPPING_CHIP_QTY, A.LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT   
+    from uledgp_prod.l6k_array_h_sheet_output_ods A 
+    LEFT JOIN 
+    (
+      select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+    ) B 
+    ON A.MODEL_NO=B.MODEL_NO
+    where A.MFG_DAY between ("2022-03-01") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) 
+
+) A LEFT JOIN 
+(
+    select B.* 
+    from (
+        select B.MODEL_NO, B.PRODUCT_CODE, B.OP_ID, B.MFG_DAY, B.LOT_TYPE, B.SCRAP_TYPE, B.SCRAP_FLAG, B.SHEET_ID, B.LOT_RUN_ID, B.TRANS_TIMESTAMP, B.SCRAP_CHIP_QTY,
+        RANK() OVER(PARTITION BY B.SHEET_ID, B.OP_ID, B.SCRAP_TYPE, B.LOT_RUN_ID ORDER BY B.SHEET_ID, B.OP_ID, B.SCRAP_TYPE, B.LOT_RUN_ID, B.TRANS_TIMESTAMP desc) RANK1, 
+        Case when length(B.SCRAP_CODE_CAT)>0 then upper(B.SCRAP_CODE_CAT) when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+        Case when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON02,
+        Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.TRANS_REASON) end as SCRAP_REASON03 
+        from uledgp_prod.l6k_array_h_lot_sheetscrap_ods B 
+        where (substr(B.MODEL_NO,6,1) in ('U') or substr(B.PRODUCT_CODE,6,1) in ('U')) and B.LOT_TYPE not in ('MQC')
+        ) B 
+    where B.RANK1='1' and B.SCRAP_FLAG='S'
+) B 
+ON A.SHEET_ID=B.SHEET_ID 
+'''
+
+df_panel_bincode = spark.sql(sql_string)
+df_panel_bincode = df_panel_bincode.toPandas()
+df_panel_bincode
+
+
+
+
+
+
+From: 2202028 陳智鉉 
+Sent: Monday, April 25, 2022 1:23 PM
+To: HungDe Chen 陳宏德; Sarah CY Lin 林佳穎; Patrick CY Peng 彭駿揚
+Subject: 0425 良率分析平台OX討論 SQL
+
+Dear sirs:
+
+今日上午討論的幾個SQL如下:
+
+1.      找出跟總片數不相符的SCRAP_CHIP_QTY
+
+select *
+from
+(
+
+
+SELECT A.*, 
+Case when length(B.SCRAP_CODE_CAT)>0 then upper(B.SCRAP_CODE_CAT) when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+Case when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON02,
+Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.TRANS_REASON) end as SCRAP_REASON03, B.SCRAP_CHIP_QTY
+from (
+select A.MFG_DAY as SHIPPING_MFG_DAY, A.OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID_CHIP_ID as SHEET_ID, A.START_DATE, A.SHIPPING_TIME, A.OUTPUT_TIME, A.SHIPPING_SHEET_QTY, A.OUTPUT_CHIP_QTY, A.SHIPPING_CHIP_QTY, A.LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT   
+from uledgp_prod.l6k_array_h_sheet_output_ods A 
+LEFT JOIN 
+(
+select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+) B 
+ON A.MODEL_NO=B.MODEL_NO
+where A.MFG_DAY between ("2021-04-20") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) 
+) A LEFT JOIN uledgp_prod.l6k_array_h_lot_sheetscrap_ods B ON A.SHEET_ID=B.SHEET_ID 
+WHERE (substr(B.MODEL_NO,6,1) in ('U') or substr(B.PRODUCT_CODE,6,1) in ('U')) and B.SCRAP_FLAG='S' and B.LOT_TYPE not in ('MQC')
+order by OUTPUT_MFG_DAY
+
+
+)
+where SCRAP_CHIP_QTY>=9
+order by SCRAP_CHIP_QTY
+
+
+
+2.      找出 總片數不相符的SCRAP_CHIP_QTY 的原因
+
+select *
+from uledgp_prod.l6k_array_h_lot_sheetscrap_ods
+where SHEET_ID in ('EE2N2060M', 'ED1NC2T2E', 'ED1NC2T2A')
+order by SHEET_ID
+
+
+
+3.      SHIPPING_MFG_DAY 的重複筆數
+
+select SHIPPING_MFG_DAY, count(SHIPPING_MFG_DAY) as SHIPPING_MFG_DAY_CNT
+from
+(
+
+select SHIPPING_MFG_DAY, OUTPUT_MFG_DAY, model_type, count(SHIPPING_MFG_DAY) as SHIPPING_MFG_DAY_CNT, sum(OUTPUT_CHIP_QTY) as OUTPUT_CHIP_QTY, sum(SHIPPING_CHIP_QTY) as SHIPPING_CHIP_QTY, sum(CHIP_PER_SHEET) as CHIP_PER_SHEET
+from
+(
+
+
+select A.MFG_DAY as SHIPPING_MFG_DAY, A.OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, SUBSTR(A.SHEET_ID_CHIP_ID, 1, 2) as model_type,  A.LOT_ID, A.SHEET_ID_CHIP_ID as SHEET_ID, A.START_DATE, A.SHIPPING_TIME, A.OUTPUT_TIME, A.SHIPPING_SHEET_QTY, A.OUTPUT_CHIP_QTY, A.SHIPPING_CHIP_QTY, A.LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT
+from uledgp_prod.l6k_array_h_sheet_output_ods A 
+LEFT JOIN 
+(
+select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+) B 
+ON A.MODEL_NO=B.MODEL_NO
+where A.MFG_DAY between ("2021-04-20") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) 
+
+
+)
+group by SHIPPING_MFG_DAY, OUTPUT_MFG_DAY, model_type
+order by SHIPPING_MFG_DAY, OUTPUT_MFG_DAY, model_type
+
+)
+
+group by SHIPPING_MFG_DAY
+order by count(SHIPPING_MFG_DAY) desc
+
+
+
+4.      算model type 的 OUTPUT_YIELD 及 SHIPPING_YIELD
+
+select A.MFG_DAY, A.model_type, CASE WHEN B.SHEET_SCRAP_CHIP>0 THEN A.OUTPUT_CHIP/(A.TOTAL_CHIP+B.SHEET_SCRAP_CHIP) ELSE A.OUTPUT_CHIP/A.TOTAL_CHIP END as OUTPUT_YIELD, CASE WHEN B.SHEET_SCRAP_CHIP>0 THEN A.SHIPPING_CHIP/(A.TOTAL_CHIP+B.SHEET_SCRAP_CHIP) ELSE A.SHIPPING_CHIP/A.TOTAL_CHIP END as SHIPPING_YIELD 
+from (
+select A.OUTPUT_MFG_DAY as MFG_DAY, sum(A.OUTPUT_CHIP_QTY) as OUTPUT_CHIP, sum(A.SHIPPING_CHIP_QTY) as SHIPPING_CHIP, sum(B.CHIP_PER_SHEET) as TOTAL_CHIP, SUBSTRING(A.LOT_ID, 0, 2) AS model_type
+from uledgp_prod.l6k_array_h_sheet_output_ods A 
+LEFT JOIN 
+(
+select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+) B 
+ON A.MODEL_NO=B.MODEL_NO
+where A.MFG_DAY between ("2021-04-20") and ("2022-04-20")
+group by A.OUTPUT_MFG_DAY, SUBSTRING(A.LOT_ID, 0, 2)
+) A LEFT JOIN 
+(SELECT MFG_DAY, substr(MODEL_NO, length(MODEL_NO)-1,2) as ULED_TYPE, sum(SCRAP_CHIP_QTY) as SHEET_SCRAP_CHIP, SUBSTRING(LOT_ID, 0, 2) AS model_type
+FROM uledgp_prod.l6b_array_h_lot_sheetscrap_ods 
+WHERE MFG_DAY between ("2021-04-20") and ("2022-04-20") and substr(MODEL_NO,6,1) in ('U') and  SCRAP_TYPE='SHEET' and SCRAP_FLAG='S' and upper(SCRAP_NOTE) not in ('OK') and LOT_TYPE not in ('MQC') 
+group by MFG_DAY, substr(MODEL_NO, length(MODEL_NO)-1,2), SUBSTRING(A.LOT_ID, 0, 2) ) B ON A.MFG_DAY=B.MFG_DAY
+order by MFG_DAY
+
+
+
+5.      算model type 的 OUTPUT_CHIP, SHIPPING_CHIP, TOTAL_CHIP
+
+select A.OUTPUT_MFG_DAY as MFG_DAY, sum(A.OUTPUT_CHIP_QTY) as OUTPUT_CHIP, sum(A.SHIPPING_CHIP_QTY) as SHIPPING_CHIP, sum(B.CHIP_PER_SHEET) as TOTAL_CHIP, SUBSTRING(A.LOT_ID, 0, 2) AS model_type
+from uledgp_prod.l6k_array_h_sheet_output_ods A 
+LEFT JOIN 
+(
+select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+) B 
+ON A.MODEL_NO=B.MODEL_NO
+where A.MFG_DAY between ("2021-04-20") and ("2022-04-20")
+group by A.OUTPUT_MFG_DAY, SUBSTRING(A.LOT_ID, 0, 2)
+order by A.OUTPUT_MFG_DAY
+
+
+
+
+如有問題煩請回信告知，謝謝!!!
+
+智鉉
+

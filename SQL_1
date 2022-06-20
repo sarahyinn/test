@@ -1,0 +1,153 @@
+where substr(B.MODEL_NO,6,1) in ('U') and upper(B.SCRAP_NOTE) not in ('OK') and B.LOT_TYPE not in ('MQC') and substr(B.MODEL_NO, length(B.MODEL_NO)-1,2) in ('FP')
+
+where A.MFG_DAY between ("2021-04-20") and ("2022-04-20") and A.SCRAP_TYPE in ('CHIP') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and substr(A.LOT_ID,3,1) in ('1') 
+
+
+between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD')
+
+
+
+
+select A.MFG_DAY, A.SHEET_ID, A.SUB_SHEET_ID, A.CHIP_ID, A.OP_ID, A.LOT_STATUS, A.SLOW_MOVE_DAYS, A.WIP_SNAP_DAY, A.LAST_INLINE_TIME, 
+B.CHIP_TYPE, B.PANEL_FLAG as SCRAP_PANEL_FLAG, B.SCRAP_FLAG, case when B.SCRAP_FLAG='U' then -1*B.SCRAP_CHIP_QTY else B.SCRAP_CHIP_QTY end as SCRAP_CHIP_QTY,  
+Case when length(B.SCRAP_REASON_CAT)>0 then upper(B.SCRAP_REASON_CAT) when length(B.OP_ID)>0 then B.OP_ID when length(B.SCRAP_CODE_DESC)>0 then B.SCRAP_CODE_DESC else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+Case when length(B.OP_ID)>0 then B.OP_ID when length(B.SCRAP_CODE_DESC)>0 then upper(B.SCRAP_CODE_DESC) else '' end as SCRAP_REASON02,
+Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.SCRAP_CODE_DESC) end as SCRAP_REASON03 
+from (
+
+select A.MFG_DAY, A.SHEET_ID, A.SUB_SHEET_ID, A.CHIP_ID, B.OP_ID, B.LOT_STATUS, B.SLOW_MOVE_DAYS, B.WIP_SNAP_DAY, B.LAST_INLINE_TIME 
+from (
+
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(0,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(0/4)) as CHIP_ID, substr(A.LAYOUT_OX,1, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(1,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(1/4)) as CHIP_ID, substr(A.LAYOUT_OX,2, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(2,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(2/4)) as CHIP_ID, substr(A.LAYOUT_OX,3, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(3,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(3/4)) as CHIP_ID, substr(A.LAYOUT_OX,4, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(4,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(4/4)) as CHIP_ID, substr(A.LAYOUT_OX,5, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(5,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(5/4)) as CHIP_ID, substr(A.LAYOUT_OX,6, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(6,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),2)/2) + floor(6/4)) as CHIP_ID, substr(A.LAYOUT_OX,7, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(7,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),2)/2) + floor(7/4)) as CHIP_ID, substr(A.LAYOUT_OX,8, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day between to_date('2022-04-06', 'YYYY-MM-DD') and to_date('2022-05-01' , 'YYYY-MM-DD') and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+) A  LEFT JOIN celods.H_CHIP_WIP_ODS B  on A.CHIP_ID=B.SHEET_ID_CHIP_ID 
+) A  LEFT JOIN celods.H_CHIP_SCRAP_ODS B  on A.CHIP_ID=B.SHEET_ID_CHIP_ID 
+
+
+-----
+
+select A.MFG_DAY, A.SHEET_ID, A.SUB_SHEET_ID, A.CHIP_ID, A.CHIP_OX, A.LAYOUT_OX, A.OP_ID, A.LOT_STATUS, A.SLOW_MOVE_DAYS, A.WIP_SNAP_DAY, A.LAST_INLINE_TIME, 
+B.CHIP_TYPE, B.PANEL_FLAG as SCRAP_PANEL_FLAG, B.SCRAP_FLAG, case when B.SCRAP_FLAG='U' then -1*B.SCRAP_CHIP_QTY else B.SCRAP_CHIP_QTY end as SCRAP_CHIP_QTY,  
+Case when length(B.SCRAP_REASON_CAT)>0 then upper(B.SCRAP_REASON_CAT) when length(B.OP_ID)>0 then B.OP_ID when length(B.SCRAP_CODE_DESC)>0 then B.SCRAP_CODE_DESC else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+Case when length(B.OP_ID)>0 then B.OP_ID when length(B.SCRAP_CODE_DESC)>0 then upper(B.SCRAP_CODE_DESC) else '' end as SCRAP_REASON02,
+Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.SCRAP_CODE_DESC) end as SCRAP_REASON03 
+from (
+
+select A.MFG_DAY, A.SHEET_ID, A.SUB_SHEET_ID, A.CHIP_ID, A.CHIP_OX, A.LAYOUT_OX, B.OP_ID, B.LOT_STATUS, B.SLOW_MOVE_DAYS, B.WIP_SNAP_DAY, B.LAST_INLINE_TIME 
+from (
+
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(0,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(0/4)) as CHIP_ID, substr(A.LAYOUT_OX,1, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(1,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(1/4)) as CHIP_ID, substr(A.LAYOUT_OX,2, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(2,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(2/4)) as CHIP_ID, substr(A.LAYOUT_OX,3, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(3,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(3/4)) as CHIP_ID, substr(A.LAYOUT_OX,4, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(4,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(4/4)) as CHIP_ID, substr(A.LAYOUT_OX,5, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(5,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),1)/2) + floor(5/4)) as CHIP_ID, substr(A.LAYOUT_OX,6, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(6,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),2)/2) + floor(6/4)) as CHIP_ID, substr(A.LAYOUT_OX,7, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+union 
+select A.MFG_DAY, A.SHEET_ID, A.SHEET_ID_CHIP_ID as SUB_SHEET_ID, substr(A.SHEET_ID_CHIP_ID,1,13)  ||  TO_CHAR(4*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID)-1,1)/4) + mod(7,4)) || TO_CHAR(2*floor(substr(A.SHEET_ID_CHIP_ID, length(A.SHEET_ID_CHIP_ID),2)/2) + floor(7/4)) as CHIP_ID, substr(A.LAYOUT_OX,8, 1) as CHIP_OX, A.LAYOUT_OX, A.START_DATE, A.INPUT_COUNT, A.START_CHIP_QTY, A.START_O_CHIP_QTY, A.START_X_CHIP_QTY, A.START_F_CHIP_QTY    
+from  CELODS.H_CHIP_INPUT_ODS  A where A.mfg_day>sysdate-21 and A.mfg_day<sysdate-4 and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.PANEL_FLAG in ('S')   AND A.INPUT_COUNT=1 
+) A  LEFT JOIN celods.H_CHIP_WIP_ODS B  on A.CHIP_ID=B.SHEET_ID_CHIP_ID 
+) A  LEFT JOIN celods.H_CHIP_SCRAP_ODS B  on A.CHIP_ID=B.SHEET_ID_CHIP_ID 
+
+
+
+**************
+
+
+SCRAP_SHEET_CHIP_QTY and SCRAP_REASON
+
+select A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.START_DATE, A.SCRAP_CHIP_QTY, A.OUTPUT_MFG_DAY, A.OUTPUT_TIME, A.OUTPUT_CHIP_QTY, 
+A.OUTPUT_SCRAP_CHIP_QTY, A.LAYOUT_OX, A.SHIPPING_MFG_DAY, A.SHIPPING_TIME, A.SHIPPING_SHEET_QTY, A.SHIPPING_CHIP_QTY, A.SHIPPING_SCRAP_CHIP_QTY,
+A.SCRAP_REASON01, A.SCRAP_REASON02, A.SCRAP_REASON03, 
+Case when substr(A.SCRAP_REASON03,1,4)='AUTO' then A.SCRAP_REASON02||'_AUTO' else A.SCRAP_REASON02||'_'||A.SCRAP_REASON03 end as SCRAP_REASON04,
+A.SCRAP_TYPE, SUBSTRING(A.LOT_ID, 0, 2) AS MODE_TYPE, A.CHIP_PER_SHEET, A.X_CHIP_CNT, A.Y_CHIP_CNT
+
+from (
+    select A.MFG_DAY as SHIPPING_MFG_DAY, A.MFG_DAY as OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.TRANS_TIMESTAMP as START_DATE, A.TRANS_TIMESTAMP as SHIPPING_TIME, A.TRANS_TIMESTAMP as OUTPUT_TIME, 0 as SHIPPING_SHEET_QTY, 0 as OUTPUT_CHIP_QTY, 0 as SHIPPING_CHIP_QTY, 'X' as LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT,
+    A.LOT_TYPE, A.SCRAP_TYPE, A.SCRAP_FLAG, A.OP_ID, B.CHIP_PER_SHEET as SCRAP_CHIP_QTY, B.CHIP_PER_SHEET as OUTPUT_SCRAP_CHIP_QTY, B.CHIP_PER_SHEET as SHIPPING_SCRAP_CHIP_QTY,
+    RANK() OVER(PARTITION BY A.SHEET_ID, A.OP_ID, A.SCRAP_TYPE, A.LOT_RUN_ID ORDER BY A.SHEET_ID, A.OP_ID, A.SCRAP_TYPE, A.LOT_RUN_ID, A.TRANS_TIMESTAMP desc) RANK1, 
+    Case when length(A.SCRAP_CODE_CAT)>0 then upper(A.SCRAP_CODE_CAT) when length(A.OP_ID)>0 and A.OP_ID='DUMMY' then upper(A.TRANS_REASON) when length(A.OP_ID)>0 then A.OP_ID else upper(A.SCRAP_NOTE) end as SCRAP_REASON01,
+    Case when length(A.OP_ID)>0 and A.OP_ID='DUMMY' then upper(A.TRANS_REASON) when length(A.OP_ID)>0 then A.OP_ID else upper(A.SCRAP_NOTE) end as SCRAP_REASON02,
+    Case when length(A.SCRAP_NOTE)>1 then upper(A.SCRAP_NOTE) else upper(A.TRANS_REASON) end as SCRAP_REASON03 
+    from uledgp_prod.l6k_array_h_lot_sheetscrap_ods A 
+    LEFT JOIN 
+    (
+      select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+    ) B 
+    ON A.MODEL_NO=B.MODEL_NO
+    where A.MFG_DAY between ("2021-04-20") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.SCRAP_TYPE not in ('CHIP')
+) A 
+where A.RANK1='1' and A.SCRAP_FLAG='S'
+
+
+
+OUTPUT_TOTAL_CHIP_QTY and SHIPPING_TOTAL_CHIP_QTY and SCRAP_REASON
+
+SELECT A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID, A.START_DATE, B.SCRAP_CHIP_QTY, 
+A.OUTPUT_MFG_DAY, A.OUTPUT_TIME, A.OUTPUT_CHIP_QTY, 
+Case when (A.OUTPUT_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as OUTPUT_SCRAP_CHIP_QTY, 
+A.LAYOUT_OX, 
+A.SHIPPING_MFG_DAY, A.SHIPPING_TIME, A.SHIPPING_SHEET_QTY, A.SHIPPING_CHIP_QTY,
+Case when (A.SHIPPING_TIME>=B.TRANS_TIMESTAMP) and B.SCRAP_TYPE='CHIP' then B.SCRAP_CHIP_QTY else 0 end as SHIPPING_SCRAP_CHIP_QTY,
+B.SCRAP_REASON01, B.SCRAP_REASON02, B.SCRAP_REASON03, 
+Case when substr(B.SCRAP_REASON03,1,4)='AUTO' then B.SCRAP_REASON02||'_AUTO' else B.SCRAP_REASON02||'_'||B.SCRAP_REASON03 end as SCRAP_REASON04,
+B.SCRAP_TYPE, SUBSTRING(A.LOT_ID, 0, 2) AS MODE_TYPE, A.CHIP_PER_SHEET, A.X_CHIP_CNT, A.Y_CHIP_CNT
+from (
+
+    select A.MFG_DAY as SHIPPING_MFG_DAY, A.OUTPUT_MFG_DAY, A.MODEL_NO, A.PRODUCT_CODE, A.LOT_ID, A.SHEET_ID_CHIP_ID as SHEET_ID, A.START_DATE, A.SHIPPING_TIME, 
+    A.OUTPUT_TIME, A.SHIPPING_SHEET_QTY, A.OUTPUT_CHIP_QTY, A.SHIPPING_CHIP_QTY, A.LAYOUT_OX, B.CHIP_PER_SHEET, B.X_CHIP_CNT, B.Y_CHIP_CNT
+    from uledgp_prod.l6k_array_h_sheet_output_ods A 
+    LEFT JOIN 
+    (
+      select MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT from uledgp_prod.l6k_array_c_rou_prod_mst where ACTIVE_FLAG='Y' group by MODEL_NO, CHIP_PER_SHEET, X_CHIP_CNT, Y_CHIP_CNT
+    ) B 
+    ON A.MODEL_NO=B.MODEL_NO
+    where A.MFG_DAY between ("2021-04-20") and ("2022-04-20") and (substr(A.MODEL_NO,6,1) in ('U') or substr(A.PRODUCT_CODE,6,1) in ('U')) and A.Layout_OX is not null
+
+) A LEFT JOIN 
+(
+        select B.MODEL_NO, B.PRODUCT_CODE, B.OP_ID, B.MFG_DAY, B.LOT_TYPE, B.SCRAP_TYPE, B.SCRAP_FLAG, B.SHEET_ID, B.LOT_RUN_ID, B.TRANS_TIMESTAMP, 
+        Case when B.SCRAP_FLAG='U' then -1*B.SCRAP_CHIP_QTY else B.SCRAP_CHIP_QTY end as SCRAP_CHIP_QTY,
+        Case when length(B.SCRAP_CODE_CAT)>0 then upper(B.SCRAP_CODE_CAT) when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON01,
+        Case when length(B.OP_ID)>0 and B.OP_ID='DUMMY' then upper(B.TRANS_REASON) when length(B.OP_ID)>0 then B.OP_ID else upper(B.SCRAP_NOTE) end as SCRAP_REASON02,
+        Case when length(B.SCRAP_NOTE)>1 then upper(B.SCRAP_NOTE) else upper(B.TRANS_REASON) end as SCRAP_REASON03 
+        from uledgp_prod.l6k_array_h_lot_sheetscrap_ods B 
+        where (substr(B.MODEL_NO,6,1) in ('U') or substr(B.PRODUCT_CODE,6,1) in ('U')) and B.LOT_TYPE not in ('MQC') 
+) B 
+ON A.SHEET_ID=B.SHEET_ID 
+order by SHEET_ID
+
