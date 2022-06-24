@@ -1,0 +1,44 @@
+%sql
+select TEST_TIME, OP_KEY, MODEL_NO, TFT_LOT_ID, TFT_SHEET_ID, TFT_CHIP_ID, FIRST_RETYPE_FLAG, SCRAP_FLAG, SCRAP_CNT, SCRAP_NOTE, RETYPE_CNT, RETYPE_DEFECT_CODE_DESC,  
+case when SCRAP_CNT = '1' then 'S' when RETYPE_CNT = '1' then 'R' else 'G' END AS GRADE
+
+from(
+
+select A.*, B.RETYPE_CNT, B.RETYPE_DEFECT_CODE_DESC
+
+from (
+  select A.*, B.SCRAP_CNT, B.SCRAP_NOTE
+
+  from(
+    select  C.TEST_TIME, C.OP_KEY, C.MODEL_NO,C.TFT_LOT_ID, C.TFT_SHEET_ID, C.TFT_SHEET_ID||D.LAYOUT_LABEL AS TFT_CHIP_ID, C.FIRST_RETYPE_FLAG, C.SCRAP_FLAG, 
+    RANK() OVER(PARTITION BY C.OP_KEY, C.TFT_SHEET_ID ORDER BY C.OP_KEY, C.TFT_SHEET_ID, C.TEST_TIME desc) RANK1
+    from uledgp_eng.l6b_cell_h_aidi_secsheet_sw C
+    left join 
+      (
+
+      select A.LM_TIME, A.MODEL_NO, A.LAYOUT_ID, B.LAYOUT_BASE, B.LAYOUT_A, B.LAYOUT_B, B.LAYOUT_SEQ, B.LAYOUT_LABEL
+      from uledgp_prod.l6b_array_c_mat_mdlabbrlyt A 
+      LEFT JOIN uledgp_prod.l6b_array_c_mat_lytdtl B ON A.LAYOUT_ID = B.LAYOUT_ID AND A.LAYOUT_BASE = B.LAYOUT_BASE
+
+      ) D ON C.MODEL_NO = D.MODEL_NO
+  ) A
+  LEFT JOIN 
+  (
+  select TEST_TIME,TFT_CHIP_ID, SUM(case when SCRAP_ACTION = 'Scrap' then 1 else -1 end) as SCRAP_CNT, NOTE as SCRAP_NOTE
+  from uledgp_eng.l6b_cell_h_aidi_scrapevent_sw
+  GROUP BY TEST_TIME, TFT_CHIP_ID, NOTE
+  ) B
+  ON A.TFT_CHIP_ID = B.TFT_CHIP_ID AND A.TEST_TIME = B.TEST_TIME
+) A LEFT JOIN
+(
+select TEST_TIME, TFT_CHIP_ID, 1 AS RETYPE_CNT, RETYPE_DEFECT_CODE_DESC
+from uledgp_eng.l6b_cell_h_aidi_retypeevent_sw
+where TFT_CHIP_ID IS NOT NULL
+GROUP BY TFT_CHIP_ID, TEST_TIME, RETYPE_DEFECT_CODE_DESC
+) B 
+
+ON A.TFT_CHIP_ID = B.TFT_CHIP_ID and  A.TEST_TIME = B.TEST_TIME
+
+)
+
+WHERE RANK1 = '1' 
